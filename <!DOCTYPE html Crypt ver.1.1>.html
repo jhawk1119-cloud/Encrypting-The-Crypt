@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encrypting the Crypt: Terminal Edition</title>
+    <style>
+        body {
+            background-color: #050505;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* Matrix rain effect background */
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.15;
+        }
+
+        #game-layout {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 1100px;
+            box-sizing: border-box;
+        }
+
+        #terminal-container {
+            background-color: rgba(10, 10, 10, 0.95);
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            padding: 25px;
+            flex: 2;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            box-sizing: border-box;
+            transition: border-color 0.5s ease, box-shadow 0.5s ease;
+        }
+
+        .market-column {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #hardware-shop {
+            background-color: rgba(10, 10, 10, 0.95);
+            border: 2px solid #ffaa00;
+            border-radius: 5px;
+            padding: 25px;
+            box-shadow: 0 0 20px rgba(255, 170, 0, 0.1);
+            box-sizing: border-box;
+        }
+
+        #potion-shop {
+            background-color: rgba(10, 10, 10, 0.95);
+            border: 2px solid #cc00ff;
+            border-radius: 5px;
+            padding: 25px;
+            box-shadow: 0 0 20px rgba(204, 0, 255, 0.1);
+            box-sizing: border-box;
+        }
+
+        .terminal-header {
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            color: #00aa00;
+        }
+
+        .shop-header {
+            border-bottom: 1px solid currentColor;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h1 {
+            color: #00ff00;
+            margin: 0 0 5px 0;
+            font-size: 1.6rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.4rem;
+            text-transform: uppercase;
+        }
+        #hardware-shop h2 { color: #ffaa00; text-shadow: 0 0 5px rgba(255, 170, 0, 0.3); }
+        #potion-shop h2 { color: #cc00ff; text-shadow: 0 0 5px rgba(204, 0, 255, 0.3); }
+
+        #target-computer-type {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            background: rgba(0, 255, 0, 0.1);
+            padding: 8px;
+            border-radius: 3px;
+        }
+
+        .crypt-color { color: #ffaa00; font-weight: bold; text-shadow: 0 0 5px rgba(255, 170, 0, 0.5); }
+        .credits-color { color: #cc00ff; font-weight: bold; text-shadow: 0 0 5px rgba(204, 0, 255, 0.5); }
+
+        .console-log {
+            text-align: left;
+            height: 95px;
+            overflow-y: auto;
+            border: 1px solid #005500;
+            background: #020202;
+            padding: 10px;
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+            color: #00cc00;
+        }
+
+        #target-display {
+            background-color: #001100;
+            border: 1px dashed #00ff00;
+            padding: 15px;
+            font-size: 2rem;
+            letter-spacing: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 0 0 8px #00ff00;
+            text-align: center;
+        }
+
+        .input-line {
+            display: flex;
+            align-items: center;
+            background: #001100;
+            border: 1px solid #00ff00;
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+
+        .prompt-symbol {
+            font-size: 1.1rem;
+            margin-right: 10px;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        input[type="text"] {
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.2rem;
+            width: 100%;
+            text-transform: uppercase;
+        }
+        input[type="text"]:focus { outline: none; }
+
+        /* Computer Themes & Colors */
+        .comp-standard { background: #111; color: #00ff00; border: 1px solid #00ff00; }
+        .comp-gold { background: #ffd700; color: #000; box-shadow: 0 0 10px #ffd700; }
+        .comp-diamond { background: #b9f2ff; color: #000; box-shadow: 0 0 12px #b9f2ff; }
+        .comp-vpn { background: #ff3333; color: #fff; box-shadow: 0 0 10px #ff3333; }
+        .comp-rainbow { background: linear-gradient(45deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff); color: #fff; text-shadow: 1px 1px 2px #000; box-shadow: 0 0 15px #ff00ff; }
+
+        /* Shop Item Styles */
+        .market-list { display: flex; flex-direction: column; gap: 12px; }
+        .market-item {
+            border: 1px solid #332200;
+            background: rgba(15, 10, 0, 0.4);
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item-info { text-align: left; }
+        .item-name { font-weight: bold; font-size: 0.95rem; margin-bottom: 2px; }
+        .item-desc { color: #888; font-size: 0.75rem; }
+        .item-cost { font-size: 0.85rem; margin-top: 2px; font-weight: bold; }
+
+        #hardware-shop .market-item.available { border-color: #ffaa00; }
+        #potion-shop .market-item.available { border-color: #cc00ff; }
+        .market-item.owned { border-color: #00ff00 !important; background: rgba(0, 20, 0, 0.2); }
+
+        .buy-btn {
+            background: transparent;
+            border: 1px solid #555;
+            color: #555;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 6px 12px;
+            cursor: not-allowed;
+            font-weight: bold;
+            border-radius: 3px;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+        .available .buy-btn { cursor: pointer; }
+        #hardware-shop .available .buy-btn { border-color: #ffaa00; color: #ffaa00; }
+        #hardware-shop .available .buy-btn:hover { background: #ffaa00; color: #000; }
+        #potion-shop .available .buy-btn { border-color: #cc00ff; color: #cc00ff; }
+        #potion-shop .available .buy-btn:hover { background: #cc00ff; color: #000; }
+        .owned .buy-btn { border-color: #00ff00 !important; color: #00ff00 !important; cursor: default; }
+
+        #system-status { margin-top: 15px; font-size: 0.9rem; min-height: 20px; font-weight: bold; }
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
+        @media (max-width: 850px) { #game-layout { flex-direction: column; } }
+    </style>
+</head>
+<body>
+
+    <canvas id="matrix-bg"></canvas>
+
+    <div id="game-layout">
+        <div id="terminal-container">
+            <div class="terminal-header">
+                <span>SECURE_CRYPT_OS v7.00</span>
+                <span>TARGET ENGINE: CONNECTED</span>
+            </div>
+            
+            <h1>Encrypting the Crypt</h1>
+            <div id="target-computer-type" class="comp-standard">Target: Standard Workstation</div>
+            
+            <div class="stats">
+                <div>TARGETS SECURED: <span id="score">0</span></div>
+                <div style="color: #00bfff;">RULE: TYPE KEY TO THE RIGHT</div>
+                <div class="crypt-color">CRYPT: <span id="crypt-currency">0</span></div>
+                <div class="credits-color">CREDITS: <span id="credits-currency">0</span> ¢</div>
+            </div>
+
+            <div class="console-log" id="console-log">
+                <div>> Initializing keyboard mapping decrypter...</div>
+                <div>> System online. Shift code neighbor detection active.</div>
+            </div>
+
+            <div id="target-display">NET</div>
+
+            <div class="input-line">
+                <span class="prompt-symbol">root@crypt_vault:~#</span>
+                <input type="text" id="player-input" autofocus autocomplete="off" placeholder="Look at keyboard, shift right">
+            </div>
+
+            <div id="system-status"></div>
+        </div>
+
+        <div class="market-column">
+            <div id="hardware-shop">
+                <div class="shop-header" style="color: #ffaa00;"><span>// Hardware Array //</span></div>
+                <h2>Encryption Devices</h2>
+                <div class="market-list" id="hardware-list"></div>
+            </div>
+
+            <div id="potion-shop">
+                <div class="shop-header" style="color: #cc00ff;"><span>// Alchemical Liquids //</span></div>
+                <h2>Potion Market</h2>
+                <div class="market-list" id="potion-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Matrix Background Effect
+        const canvas = document.getElementById('matrix-bg');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
+        const fontSize = 16;
+        const columns = canvas.width / fontSize;
+        const rainDrops = Array.from({ length: columns }).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0F0';
+            ctx.font = fontSize + 'px monospace';
+            for (let i = 0; i < rainDrops.length; i++) {
+                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+                if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) rainDrops[i] = 0;
+                rainDrops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 30);
+
+        // Keyboard rows maps for easy neighbor shifting
+        const row1 = "QWERTYUIOPQ";
+        const row2 = "ASDFGHJKLAS";
+        const row3 = "ZXCVBNMZX";
+
+        const wordsBase = ["HUB", "NET", "WEB", "KEY", "BAG", "ZIP", "LAP", "LOG", "BIT", "RUN", "PORT", "HASH", "CORE"];
+        const computerArchetypes = [
+            { name: "Standard Workstation", class: "comp-standard", multiplier: 1.0, chance: 0.50 },
+            { name: "Gold Commercial Server", class: "comp-gold", multiplier: 3.0, chance: 0.25 },
+            { name: "Diamond Banking Core", class: "comp-diamond", multiplier: 6.0, chance: 0.15 },
+            { name: "VPN Secured Host", class: "comp-vpn", multiplier: 10.0, chance: 0.07 },
+            { name: "Rainbow Quantum Mainframe", class: "comp-rainbow", multiplier: 20.0, chance: 0.03 }
+        ];
+
+        let score = 0;
+        let cryptCurrency = 0;
+        let creditsCurrency = 0;
+
+        let currentComputer = computerArchetypes[0];
+        let rawData = "";
+        let secureCipher = "";
+        
+        let shopCryptMultiplier = 1.0;
+        let clickBypass = false;
+        let doublePotionActive = false;
+
+        const targetComputerType = document.getElementById("target-computer-type");
+        const terminalContainer = document.getElementById("terminal-container");
+        const targetDisplay = document.getElementById("target-display");
+        const playerInput = document.getElementById("player-input");
+        const scoreDisplay = document.getElementById("score");
+        const cryptDisplay = document.getElementById("crypt-currency");
+        const creditsDisplay = document.getElementById("credits-currency");
+        const systemStatus = document.getElementById("system-status");
+        const consoleLog = document.getElementById("console-log");
+
+        // Markets Setup
+        const hardwareUpgrades = [
+            { id: "cpu_finder", name: "CPU Chip Finder", desc: "Boosts payout configurations. +50% CRYPT value permanently.", cost: 200, owned: false },
+            { id: "mouse_control", name: "Mouse Hijack Pointer", desc: "Bypass verification. Click the word box to solve automatically!", cost: 1200, owned: false }
+        ];
+
+        const potionItems = [
+            { id: "potion_catalyst", name: "Credit Catalyst Brew", desc: "Immediate chemical cash drop of +1,000 CRYPT.", cost: 50 },
+            { id: "potion_double", name: "Double Hype Potion", desc: "Doubles the total CRYPT payout on your next hack.", cost: 75 }
+        ];
+
+        function addLog(text) {
+            const entry = document.createElement("div");
+            entry.textContent = `> ${text}`;
+            consoleLog.appendChild(entry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        function keyboardShiftRight(word) {
+            return word.split('').map(letter => {
+                if (row1.includes(letter)) return row1[row1.indexOf(letter) + 1];
+                if (row2.includes(letter)) return row2[row2.indexOf(letter) + 1];
+                if (row3.includes(letter)) return row3[row3.indexOf(letter) + 1];
+                return letter;
+            }).join('');
+        }
+
+        function generatePacket() {
+            playerInput.value = "";
+            systemStatus.textContent = "";
+            systemStatus.style.color = "#00ff00";
+
+            // Select computer
+            const rand = Math.random();
+            let cumulative = 0;
+            currentComputer = computerArchetypes[0];
+            for (let comp of computerArchetypes) {
+                cumulative += comp.chance;
+                if (rand <= cumulative) {
+                    currentComputer = comp;
+                    break;
+                }
+            }
+
+            targetComputerType.className = currentComputer.class;
+            targetComputerType.textContent = `Target: ${currentComputer.name}`;
+
+            // Border theme adjustment 
+            const designColors = { 'comp-standard': '#00ff00', 'comp-gold': '#ffd700', 'comp-diamond': '#b9f2ff', 'comp-vpn': '#ff3333', 'comp-rainbow': '#ff00ff' };
+            terminalContainer.style.borderColor = designColors[currentComputer.class] || '#00ff00';
+
+            rawData = wordsBase[Math.floor(Math.random() * wordsBase.length)];
+            secureCipher = keyboardShiftRight(rawData);
+
+            targetDisplay.textContent = rawData;
+            addLog(`Intercepted transmission matrix from [${currentComputer.name}].`);
+        }
+
+        function processSuccess() {
+            score++;
+            
+            let baseReward = Math.floor(Math.random() * 40) + 20;
+            let finalCrypt = Math.floor(baseReward * currentComputer.multiplier * shopCryptMultiplier);
+            
+            if (doublePotionActive) {
+                finalCrypt *= 2;
+                doublePotionActive = false;
+                addLog("Double Hype Potion consumed successfully.");
+            }
+
+            cryptCurrency += finalCrypt;
+            creditsCurrency += 25; // 25 Credits per machine cleared
+
+            systemStatus.style.color = "#00ff00";
+            systemStatus.innerHTML = `BREACH SECURED // +${finalCrypt} CRYPT // +25¢ CREDITS <span class='blink'>_</span>`;
+            addLog(`Success: Cleaned ports. Wallet balance expanded.`);
+
+            updateUI();
+            setTimeout(generatePacket, 1200);
+        }
+
+        playerInput.addEventListener("keyup", function(event) {
+            if (event.key === "Enter") {
+                if (playerInput.value.toUpperCase().trim() === secureCipher) {
+                    processSuccess();
+                } else {
+                    systemStatus.style.color = "#ff3333";
+                    systemStatus.textContent = "ERROR: INTERCEPTION REJECTED - LOOK AT ROW KEYS AND SHIFT RIGHT";
+                    addLog("Warning: Input signature did not match hardware layout steps.");
+                    playerInput.select();
+                }
+            }
+        });
+
+        targetDisplay.addEventListener("click", () => {
+            if (clickBypass) {
+                addLog("Mouse Hijack injection sequence matched.");
+                processSuccess();
+            }
+        });
+
+        function renderMarkets() {
+            const hwList = document.getElementById("hardware-list");
+            hwList.innerHTML = "";
+            hardwareUpgrades.forEach(item => {
+                const itemEl = document.createElement("div");
+                itemEl.className = `market-item ${item.owned ? 'owned' : (cryptCurrency >= item.cost ? 'available' : '')}`;
+                itemEl.innerHTML = `
+                    <div class="item-info">
+                        <div class="item-name" style="color: #ffaa00;">${item.name}</div>
+                        <div class="item-desc">${item.desc}</div>
+                        <div class="item-cost">${item.owned ? 'INSTALLED' : item.cost + ' CRYPT'}</div>
+                    </div>
+                    <button class="buy-btn" onclick="buyHardware('${item.id}')">${item.owned ? 'Online' : 'Buy'}</button>
+                `;
+                hwList.appendChild(itemEl);
+            });
+
+            const pList = document.getElementById("potion-list");
+            pList.innerHTML = "";
+            potionItems.forEach(item => {
+                const itemEl = document.createElement("div");
+                itemEl.className = `market-item ${creditsCurrency >= item.cost ? 'available' : ''}`;
+                itemEl.innerHTML = `
+                    <div class="item-info">
+                        <div class="item-name" style="color: #cc00ff;">${item.name}</div>
+                        <div class="item-desc">${item.desc}</div>
+                        <div class="item-cost">${item.cost}¢</div>
+                    </div>
+                    <button class="buy-btn" onclick="buyPotion('${item.id}')">Buy</button>
+                `;
+                pList.appendChild(itemEl);
+            });
+        }
+
+        function buyHardware(id) {
+            const item = hardwareUpgrades.find(h => h.id === id);
+            if (item && !item.owned && cryptCurrency >= item.cost) {
+                cryptCurrency -= item.cost;
+                item.owned = true;
+                if(id === "cpu_finder") shopCryptMultiplier += 0.5;
+                if(id === "mouse_control") {
+                    clickBypass = true;
+                    targetDisplay.style.cursor = "pointer";
+                }
+                addLog(`Upgraded Terminal Hardware: Installed ${item.name}.`);
+                updateUI();
+            }
+        }
+
+        function buyPotion(id) {
+            const item = potionItems.find(p => p.id === id);
+            if (item && creditsCurrency >= item.cost) {
+                creditsCurrency -= item.cost;
+                if(id === "potion_catalyst") cryptCurrency += 1000;
+                if(id === "potion_double") doublePotionActive = true;
+                addLog(`Drank Potion asset: ${item.name} applied.`);
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            scoreDisplay.textContent = score;
+            cryptDisplay.textContent = cryptCurrency;
+            creditsDisplay.textContent = creditsCurrency;
+            renderMarkets();
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Fire
+        generatePacket();
+        updateUI();
+    </script>
+</body>
+</html>
